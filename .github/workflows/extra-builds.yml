@@ -81,7 +81,7 @@ jobs:
 
   mingw-build:
     name: MINGW64 build
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: [pre_job]
     if: (github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch') && needs.pre_job.outputs.should_skip != 'true'
     steps:
@@ -90,28 +90,15 @@ jobs:
           submodules: true
           persist-credentials: false
 
-      - name: Setup MSYS2 (MINGW64)
-        uses: msys2/setup-msys2@v2
+      - name: Setup environment
+        uses: ./.github/actions/setup-build-env
         with:
-          msystem: MINGW64
-          update: true
+          runs-on: ${{ matrix.os }}
+          get-build-deps: true
 
-          install: >-
-            base-devel
-            bison
-            flex
-            gawk
-            diffutils
-            make
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-gtest
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-tcl
-            mingw-w64-x86_64-libffi
-            mingw-w64-x86_64-git
-            mingw-w64-x86_64-ccache
+      - name: Install MinGW-w64
+        run: |
+          sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.23
@@ -122,14 +109,13 @@ jobs:
             mingw-build-
 
       - name: Build Yosys
-        shell: msys2 {0}
         run: |
           set -e
           procs=$(nproc)
           rm -rf build
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DYOSYS_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DYOSYS_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/toolchain-mingw-x86_64.cmake
           cmake --build build -j${procs}
-          ctest --test-dir build/tests/unit --output-on-failure
 
   wasi-build:
     name: WASI build
