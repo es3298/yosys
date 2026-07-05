@@ -203,7 +203,7 @@ bool group_cell_inputs(RTLIL::Module *module, RTLIL::Cell *cell, bool commutativ
 		if (grouped_bits[i].empty())
 			continue;
 
-		RTLIL::SigSpec new_y = module->addWire(NEW_ID, GetSize(grouped_bits[i]));
+		RTLIL::SigSpec new_y = module->addWire(NEW_ID2_SUFFIX("grp_y"), GetSize(grouped_bits[i]));
 		RTLIL::SigSpec new_a, new_b;
 		RTLIL::SigSig new_conn;
 
@@ -248,9 +248,9 @@ bool group_cell_inputs(RTLIL::Module *module, RTLIL::Cell *cell, bool commutativ
 				else if (new_a[i] == State::S0 || new_a[i] == State::S1) {
 					undef_a.append(new_a[i]);
 					if (cell->type == ID($xor))
-						undef_b.append(new_a[i] == State::S1 ? module->Not(NEW_ID, new_b[i]).as_bit() : new_b[i]);
+						undef_b.append(new_a[i] == State::S1 ? module->Not(NEW_ID2_SUFFIX("grp_undef_b"), new_b[i], false, cell->get_src_attribute()).as_bit() : new_b[i]);
 					else if (cell->type == ID($xnor))
-						undef_b.append(new_a[i] == State::S1 ? new_b[i] : module->Not(NEW_ID, new_b[i]).as_bit());
+						undef_b.append(new_a[i] == State::S1 ? new_b[i] : module->Not(NEW_ID2_SUFFIX("grp_undef_b"), new_b[i], false, cell->get_src_attribute()).as_bit());
 					else log_abort();
 					undef_y.append(new_y[i]);
 				}
@@ -273,8 +273,10 @@ bool group_cell_inputs(RTLIL::Module *module, RTLIL::Cell *cell, bool commutativ
 			new_y = std::move(def_y);
 		}
 
-
-		RTLIL::Cell *c = module->addCell(NEW_ID, cell->type);
+		RTLIL::IdString cell_name = cell->name;
+		module->rename(cell->name, NEW_ID);
+		RTLIL::Cell *c = module->addCell(NEW_ID3, cell->type);
+		c->set_src_attribute(cell->get_src_attribute());
 
 		c->setPort(ID::A, new_a);
 		c->parameters[ID::A_WIDTH] = new_a.size();
