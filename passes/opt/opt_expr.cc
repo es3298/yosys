@@ -991,12 +991,12 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 					RTLIL::SigBit a = sig_a[i];
 					if (b == ((bi ^ ci) ? State::S1 : State::S0)) {
 						module->connect(sig_y[i], a);
-						module->connect(sig_x[i], ci ? module->Not(NEW_ID, a).as_bit() : a);
+						module->connect(sig_x[i], ci ? module->Not(NEW_ID2_SUFFIX("x_inv"), a, false, cell->get_src_attribute()).as_bit() : a);
 						module->connect(sig_co[i], ci ? State::S1 : State::S0);
 					}
 					else if (a == (ci ? State::S1 : State::S0)) {
-						module->connect(sig_y[i], bi ? module->Not(NEW_ID, b).as_bit() : b);
-						module->connect(sig_x[i], (bi ^ ci) ? module->Not(NEW_ID, b).as_bit() : b);
+						module->connect(sig_y[i], bi ? module->Not(NEW_ID2_SUFFIX("y_inv"), b, false, cell->get_src_attribute()).as_bit() : b);
+						module->connect(sig_x[i], (bi ^ ci) ? module->Not(NEW_ID2_SUFFIX("x_inv"), b, false, cell->get_src_attribute()).as_bit() : b);
 						module->connect(sig_co[i], ci ? State::S1 : State::S0);
 					}
 					else
@@ -1402,7 +1402,7 @@ skip_fine_alu:
 						/* sub, b is 0 */
 						RTLIL::SigSpec a = cell->getPort(ID::A);
 						a.extend_u0(y_width, is_signed);
-						module->connect(cell->getPort(ID::X), module->Not(NEW_ID, a));
+						module->connect(cell->getPort(ID::X), module->Not(NEW_ID2_SUFFIX("ci_inv"), a, false, cell->get_src_attribute()));
 						module->connect(cell->getPort(ID::CO), RTLIL::Const(State::S1, y_width));
 					} else {
 						/* add */
@@ -1841,13 +1841,13 @@ skip_identity:
 						// Truncating division is the same as flooring division, except when
 						// the result is negative and there is a remainder - then trunc = floor + 1
 						if (is_truncating && a_signed && GetSize(sig_a) != 0 && exp != 0) {
-							Wire *flooring = module->addWire(NEW_ID, sig_y.size());
+							Wire *flooring = module->addWire(NEW_ID2_SUFFIX("flooring"), sig_y.size());
 							cell->setPort(ID::Y, flooring);
 
 							SigSpec a_sign = sig_a[sig_a.size()-1];
-							SigSpec rem_nonzero = module->ReduceOr(NEW_ID, sig_a.extract(0, exp));
-							SigSpec should_add = module->And(NEW_ID, a_sign, rem_nonzero);
-							module->addAdd(NEW_ID, flooring, should_add, sig_y);
+							SigSpec rem_nonzero = module->ReduceOr(NEW_ID2_SUFFIX("rem_nonzero"), sig_a.extract(0, exp));
+							SigSpec should_add = module->And(NEW_ID2_SUFFIX("should_add"), a_sign, rem_nonzero);
+							module->addAdd(NEW_ID2_SUFFIX("add"), flooring, should_add, sig_y);
 						}
 
 						cell->check();
@@ -1863,15 +1863,15 @@ skip_identity:
 						// the sign bits are those of A (except when R=0)
 						if (is_truncating && a_signed && GetSize(sig_a) != 0 && exp != 0)
 						{
-							module->remove(cell);
 							SigSpec truncating = sig_a.extract(0, exp);
 
 							SigSpec a_sign = sig_a[sig_a.size()-1];
-							SigSpec rem_nonzero = module->ReduceOr(NEW_ID, sig_a.extract(0, exp));
-							SigSpec extend_bit = module->And(NEW_ID, a_sign, rem_nonzero);
+							SigSpec rem_nonzero = module->ReduceOr(NEW_ID2_SUFFIX("rem_nonzero"), sig_a.extract(0, exp), false, cell->get_src_attribute());
+							SigSpec extend_bit = module->And(NEW_ID2_SUFFIX("extend_bit"), a_sign, rem_nonzero, false, cell->get_src_attribute());
 
 							truncating.append(extend_bit);
-							module->addPos(NEW_ID, truncating, sig_y, true);
+							module->addPos(NEW_ID2_SUFFIX("pos"), truncating, sig_y, true, cell->get_src_attribute());
+							module->remove(cell);
 						}
 						else
 						{
@@ -1954,7 +1954,11 @@ skip_identity:
 				int sz = cur - prev;
 				bool last = cur == GetSize(sig_y);
 
-				RTLIL::Cell *c = module->addCell(NEW_ID, cell->type);
+				RTLIL::IdString cell_name = cell->name;
+				module->rename(cell->name, NEW_ID);
+
+				RTLIL::Cell *c = module->addCell(NEW_ID3, cell->type);
+				c->set_src_attribute(cell->get_src_attribute());
 				c->setPort(ID::A, sig_a.extract(prev, sz));
 				c->setPort(ID::B, sig_b.extract(prev, sz));
 				c->setPort(ID::BI, sig_bi);
@@ -1964,7 +1968,7 @@ skip_identity:
 				RTLIL::SigSpec new_co = sig_co.extract(prev, sz);
 				if (p.second != State::Sx) {
 					module->connect(new_co[sz-1], p.second);
-					RTLIL::Wire *dummy = module->addWire(NEW_ID);
+					RTLIL::Wire *dummy = module->addWire(NEW_ID3_SUFFIX("dummy"));
 					new_co[sz-1] = dummy;
 				}
 				c->setPort(ID::CO, new_co);
@@ -2178,16 +2182,22 @@ skip_alu_split:
 
 						if (cmp_type == ID($lt))
 						{
+							RTLIL::IdString cell_name = cell->name;
+							module->rename(cell->name, NEW_ID);
+
 							condition   = stringf("unsigned X<%s", log_signal(const_sig));
 							replacement = stringf("!X[%d:%d]", var_width - 1, const_bit_hot);
-							module->addLogicNot(NEW_ID, var_high_sig, cell->getPort(ID::Y));
+							module->addLogicNot(NEW_ID3, var_high_sig, cell->getPort(ID::Y), false, cell->get_src_attribute());
 							remove = true;
 						}
 						if (cmp_type == ID($ge))
 						{
+							RTLIL::IdString cell_name = cell->name;
+							module->rename(cell->name, NEW_ID);
+
 							condition   = stringf("unsigned X>=%s", log_signal(const_sig));
 							replacement = stringf("|X[%d:%d]", var_width - 1, const_bit_hot);
-							module->addReduceOr(NEW_ID, var_high_sig, cell->getPort(ID::Y));
+							module->addReduceOr(NEW_ID3, var_high_sig, cell->getPort(ID::Y), false, cell->get_src_attribute());
 							remove = true;
 						}
 					}
@@ -2227,9 +2237,12 @@ skip_alu_split:
 					}
 					if (const_sig.is_fully_zero() && cmp_type == ID($ge))
 					{
+						RTLIL::IdString cell_name = cell->name;
+						module->rename(cell->name, NEW_ID);
+
 						condition   = "signed X>=0";
 						replacement = stringf("X[%d]", var_width - 1);
-						module->addLogicNot(NEW_ID, var_sig[var_width - 1], cell->getPort(ID::Y));
+						module->addLogicNot(NEW_ID3, var_sig[var_width - 1], cell->getPort(ID::Y), false, cell->get_src_attribute());
 						remove = true;
 					}
 				}
