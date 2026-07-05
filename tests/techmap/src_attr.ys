@@ -78,3 +78,137 @@ EOT
 
 lut2mux -word
 select -assert-count 1 t:$mux a:src=lut_word_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire input 2 \b
+  wire output 3 \y
+  attribute \src "aig_src"
+  cell $xor \xor
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \a
+    connect \B \b
+    connect \Y \y
+  end
+end
+EOT
+
+aigmap
+select -assert-any t:$_AND_ a:src=aig_src %i
+select -assert-any t:$_NOT_ a:src=aig_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire input 2 \b
+  wire output 3 \y
+  attribute \src "alu_src"
+  cell $add \add
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \a
+    connect \B \b
+    connect \Y \y
+  end
+end
+EOT
+
+alumacc
+select -assert-count 1 t:$alu a:src=alu_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire input 2 \b
+  wire width 2 input 3 \c
+  wire width 2 \m
+  wire width 2 output 4 \y
+  cell $mul \mul
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 2
+    connect \A \a
+    connect \B \b
+    connect \Y \m
+  end
+  attribute \src "macc_src"
+  cell $add \add
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 2
+    connect \A \m
+    connect \B \c
+    connect \Y \y
+  end
+end
+EOT
+
+alumacc
+select -assert-count 1 t:$macc_v2 a:src=macc_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \clk
+  wire input 2 \en
+  wire input 3 \d
+  wire output 4 \q
+  attribute \src "clockgate_src"
+  cell $dffe \ff
+    parameter \CLK_POLARITY 1
+    parameter \EN_POLARITY 1
+    parameter \WIDTH 1
+    connect \CLK \clk
+    connect \EN \en
+    connect \D \d
+    connect \Q \q
+  end
+end
+EOT
+
+clockgate -pos ICG EN:CLK:GCLK
+select -assert-count 1 t:ICG a:src=clockgate_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \clk
+  wire input 2 \en
+  wire input 3 \d
+  wire output 4 \q
+  attribute \src "clockgate_neg_src"
+  cell $dffe \ff
+    parameter \CLK_POLARITY 1
+    parameter \EN_POLARITY 0
+    parameter \WIDTH 1
+    connect \CLK \clk
+    connect \EN \en
+    connect \D \d
+    connect \Q \q
+  end
+end
+EOT
+
+clockgate -pos ICG EN:CLK:GCLK
+select -assert-count 1 t:ICG a:src=clockgate_neg_src %i
+select -assert-count 1 t:$_NOT_ a:src=clockgate_neg_src %i
