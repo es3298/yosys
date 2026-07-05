@@ -291,9 +291,10 @@ struct MuxpackWorker
 				else {
 					log_assert(cursor_cell->type == ID($mux));
 					b_sig.append(cursor_cell->getPort(ID::A));
-					s_sig.append(module->LogicNot(NEW_ID, cursor_cell->getPort(ID::S)));
+					s_sig.append(module->LogicNot(NEW_ID, cursor_cell->getPort(ID::S), false, cursor_cell->get_src_attribute()));
 				}
 				remove_cells.insert(cursor_cell);
+				first_cell->add_strpool_attribute(ID::src, cursor_cell->get_strpool_attribute(ID::src));
 			}
 
 			first_cell->setPort(ID::B, b_sig);

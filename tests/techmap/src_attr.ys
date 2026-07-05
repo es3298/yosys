@@ -1,0 +1,80 @@
+read_rtlil << EOT
+module \top
+  wire output 1 \y
+  attribute \src "bmux_src"
+  cell $bmux \bmux
+    parameter \WIDTH 1
+    parameter \S_WIDTH 2
+    connect \A 4'1010
+    connect \S 2'00
+    connect \Y \y
+  end
+end
+EOT
+
+bmuxmap -pmux
+select -assert-count 4 t:$eq a:src=bmux_src %i
+select -assert-count 1 t:$pmux a:src=bmux_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire width 3 input 1 \b
+  wire width 3 input 2 \s
+  wire output 3 \y
+  attribute \src "pmuxtree_src"
+  cell $pmux \pmux
+    parameter \WIDTH 1
+    parameter \S_WIDTH 3
+    connect \A 1'0
+    connect \B \b
+    connect \S \s
+    connect \Y \y
+  end
+end
+EOT
+
+pmuxtree
+select -assert-count 3 t:$mux a:src=pmuxtree_src %i
+select -assert-count 1 t:$reduce_or a:src=pmuxtree_src %i
+select -assert-count 1 t:$or a:src=pmuxtree_src %i
+select -assert-count 1 t:$not a:src=pmuxtree_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire output 2 \y
+  attribute \src "lut_src"
+  cell $lut \lut
+    parameter \WIDTH 1
+    parameter \LUT 2'10
+    connect \A \a
+    connect \Y \y
+  end
+end
+EOT
+
+lut2mux
+select -assert-count 1 t:$_MUX_ a:src=lut_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire output 2 \y
+  attribute \src "lut_word_src"
+  cell $lut \lut
+    parameter \WIDTH 1
+    parameter \LUT 2'10
+    connect \A \a
+    connect \Y \y
+  end
+end
+EOT
+
+lut2mux -word
+select -assert-count 1 t:$mux a:src=lut_word_src %i

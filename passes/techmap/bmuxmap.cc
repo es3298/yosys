@@ -72,7 +72,7 @@ struct BmuxmapPass : public Pass {
 				SigSpec new_data = module->addWire(NEW_ID, width);
 				for (int val = 0; val < num_cases; val++)
 				{
-					module->addEq(NEW_ID, sel, SigSpec(val, GetSize(sel)), new_s[val]);
+					module->addEq(NEW_ID, sel, SigSpec(val, GetSize(sel)), new_s[val], false, cell->get_src_attribute());
 				}
 				RTLIL::Cell *pmux = module->addPmux(NEW_ID, new_a, data, new_s, new_data);
 				pmux->add_strpool_attribute(ID::src, cell->get_strpool_attribute(ID::src));
