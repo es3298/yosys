@@ -1,0 +1,21 @@
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire input 2 \b
+  wire output 3 \y
+  attribute \src "abc_src"
+  cell $xor \xor
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \a
+    connect \B \b
+    connect \Y \y
+  end
+end
+EOT
+
+abc -g XOR
+select -assert-count 1 t:$_XOR_ a:src=abc_src %i
