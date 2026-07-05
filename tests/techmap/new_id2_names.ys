@@ -222,3 +222,50 @@ EOT
 
 select -assert-count 1 c:boolopt_*
 select -assert-count 0 c:$auto*
+
+design -reset
+
+read_verilog << EOT
+module child(output o);
+  assign o = 1'b1;
+endmodule
+module top(output y);
+  child inst_2(.o(y));
+endmodule
+EOT
+
+hierarchy -top top
+proc
+opt_hier
+select -assert-count 1 w:inst_2_const_output
+select -assert-count 0 w:$auto*
+
+design -reset
+
+read_rtlil << EOT
+module \sub
+  wire input 1 \i
+  wire output 2 \o
+  cell \namedsub $helper
+    connect \i \i
+    connect \o \o
+  end
+end
+EOT
+
+design -stash techmap
+
+read_rtlil << EOT
+module \top
+  wire input 1 \i
+  wire output 2 \o
+  cell \sub \s0
+    connect \i \i
+    connect \o \o
+  end
+end
+EOT
+
+techmap -map %techmap
+select -assert-count 1 t:namedsub
+select -assert-count 0 c:$techmap*

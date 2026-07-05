@@ -44,7 +44,7 @@ void apply_prefix(IdString prefix, IdString &id)
 	if (id[0] == '\\')
 		id = stringf("%s.%s", prefix, id.c_str()+1);
 	else
-		id = stringf("$techmap%s.%s", prefix, id);
+		id = stringf("\\%s.%s", prefix, id);
 }
 
 void apply_prefix(IdString prefix, RTLIL::SigSpec &sig, RTLIL::Module *module)
