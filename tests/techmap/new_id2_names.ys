@@ -188,6 +188,29 @@ select -assert-count 1 c:divpow2_4_add
 
 design -reset
 
+read_rtlil << EOT
+module \top
+  wire input 1 \C
+  wire input 2 \E
+  wire input 3 \D
+  wire output 4 \Q
+  cell $dffe \ffce_1
+    parameter \CLK_POLARITY 1
+    parameter \EN_POLARITY 1
+    parameter \WIDTH 1
+    connect \CLK \C
+    connect \EN \E
+    connect \D \D
+    connect \Q \Q
+  end
+end
+EOT
+
+dffunmap
+select -assert-count 1 c:ffce_1_d
+
+design -reset
+
 read_blif << EOT
 .model top
 .inputs a b

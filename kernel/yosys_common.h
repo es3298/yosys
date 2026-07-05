@@ -319,12 +319,21 @@ inline std::string removeNumericSuffix(const std::string& str)
 	return str;
 }
 
+inline std::string sanitizeDerivedId(const std::string &str)
+{
+	std::string result = str;
+	for (char &ch : result)
+		if (static_cast<unsigned char>(ch) <= ' ')
+			ch = '_';
+	return result;
+}
+
 #define NEW_ID2 cell->module->uniquify(removeNumericSuffix(cell->name.str()))
 #define NEW_ID2_SUFFIX(suffix) cell->module->uniquify(cell->name.str() + "_" + suffix)
 #define NEW_ID3 module->uniquify(cell_name.str())
 #define NEW_ID3_SUFFIX(suffix) module->uniquify(cell_name.str() + "_" + suffix)
-#define NEW_ID4 module->uniquify(name.str())
-#define NEW_ID4_SUFFIX(suffix) module->uniquify(name.str() + "_" + suffix)
+#define NEW_ID4 module->uniquify(sanitizeDerivedId(name.str()))
+#define NEW_ID4_SUFFIX(suffix) module->uniquify(sanitizeDerivedId(name.str() + "_" + suffix))
 #define NEW_ID5 module->uniquify(name)
 #define NEW_ID5_SUFFIX(suffix) module->uniquify(name + "_" + suffix)
 #define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(stringf("%s_%s", mem.mem->name.c_str(), suffix)) : module->uniquify(stringf("\\mem_%s", suffix))

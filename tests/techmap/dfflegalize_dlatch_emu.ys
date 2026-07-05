@@ -14,7 +14,7 @@ design -save orig
 
 logger -expect warning "Emulating async reset latch with a plain D latch" 4
 logger -expect warning "Emulating async set \+ reset latch with a plain D latch" 2
-equiv_opt -assert -multiclock dfflegalize -cell $_DLATCH_P_ x
+equiv_opt -nocells -assert -multiclock dfflegalize -cell $_DLATCH_P_ x
 logger -check-expected
 
 design -load orig

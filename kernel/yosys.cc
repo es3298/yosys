@@ -332,7 +332,7 @@ const std::string *create_id_prefix(std::string_view file, int line, std::string
 	if (pos != std::string_view::npos)
 		func = func.substr(pos+1);
 
-	return new std::string(stringf("$auto$%s:%d:%s$", file, line, func));
+	return new std::string(sanitizeDerivedId(stringf("$auto$%s:%d:%s$", file, line, func)));
 }
 
 RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view func, std::string_view suffix)
@@ -349,7 +349,7 @@ RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view 
 	if (pos != std::string_view::npos)
 		func = func.substr(pos+1);
 
-	return stringf("$auto$%s:%d:%s$%s$%d", file, line, func, suffix, autoidx++);
+	return sanitizeDerivedId(stringf("$auto$%s:%d:%s$%s$%d", file, line, func, suffix, autoidx++));
 }
 
 RTLIL::Design *yosys_get_design()
