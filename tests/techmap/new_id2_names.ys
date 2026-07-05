@@ -82,8 +82,11 @@ EOT
 pmuxtree
 select -assert-count 3 c:pmux_5_mux*
 select -assert-count 1 c:pmux_5_or
+select -assert-count 1 w:pmux_5_or_y
 select -assert-count 1 c:pmux_5_not
+select -assert-count 1 w:pmux_5_not_y
 select -assert-count 1 c:pmux_5_reduce_or
+select -assert-count 1 w:pmux_5_reduce_or_y
 
 design -reset
 
@@ -110,3 +113,17 @@ select -assert-count 3 c:xor_4_and*
 select -assert-count 4 c:xor_4_inv*
 select -assert-count 3 w:xor_4_bit*
 select -assert-count 4 w:xor_4_new_bit*
+
+design -reset
+
+read_blif << EOT
+.model top
+.inputs a b
+.outputs y
+.names a b y
+11 1
+.end
+EOT
+
+select -assert-count 1 c:boolopt_*
+select -assert-count 0 c:$auto*
