@@ -604,9 +604,9 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 				if (cell->type.in(ID($xor), ID($_XOR_))) {
 					SigSpec sig_y;
 					if (cell->type == ID($xor))
-						sig_y = (sig_b == State::S1 ? module->Not(NEW_ID, sig_a).as_bit() : sig_a);
+						sig_y = (sig_b == State::S1 ? module->Not(NEW_ID2_SUFFIX("xor_inv"), sig_a, false, cell->get_src_attribute()).as_bit() : sig_a);
 					else if (cell->type == ID($_XOR_))
-						sig_y = (sig_b == State::S1 ? module->NotGate(NEW_ID, sig_a) : sig_a);
+						sig_y = (sig_b == State::S1 ? module->NotGate(NEW_ID2_SUFFIX("xor_inv"), sig_a, cell->get_src_attribute()) : sig_a);
 					else log_abort();
 					replace_cell(assign_map, module, cell, "xor_buffer", ID::Y, sig_y);
 					goto next_cell;
@@ -614,12 +614,12 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 				if (cell->type.in(ID($xnor), ID($_XNOR_))) {
 					SigSpec sig_y;
 					if (cell->type == ID($xnor)) {
-						sig_y = (sig_b == State::S1 ? sig_a : module->Not(NEW_ID, sig_a).as_bit());
+						sig_y = (sig_b == State::S1 ? sig_a : module->Not(NEW_ID2_SUFFIX("xnor_inv"), sig_a, false, cell->get_src_attribute()).as_bit());
 						int width = cell->getParam(ID::Y_WIDTH).as_int();
 						sig_y.append(RTLIL::Const(State::S1, width-1));
 					}
 					else if (cell->type == ID($_XNOR_))
-						sig_y = (sig_b == State::S1 ? sig_a : module->NotGate(NEW_ID, sig_a));
+						sig_y = (sig_b == State::S1 ? sig_a : module->NotGate(NEW_ID2_SUFFIX("xnor_inv"), sig_a, cell->get_src_attribute()));
 					else log_abort();
 					replace_cell(assign_map, module, cell, "xnor_buffer", ID::Y, sig_y);
 					goto next_cell;
@@ -681,12 +681,15 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 
 				RTLIL::SigSpec y_new_0, y_new_1, y_new_x;
 
+				RTLIL::IdString cell_name = cell->name;
+				module->rename(cell->name, NEW_ID);
+
 				if (cell->type == ID($and)) {
 					if (!y_group_0.empty()) y_new_0 = Const(State::S0, GetSize(y_group_0));
 					if (!y_group_1.empty()) y_new_1 = b_group_1;
 					if (!y_group_x.empty()) {
 						if (keepdc)
-							y_new_x = module->And(NEW_ID, Const(State::Sx, GetSize(y_group_x)), b_group_x);
+							y_new_x = module->And(NEW_ID3, Const(State::Sx, GetSize(y_group_x)), b_group_x, false, cell->get_src_attribute());
 						else
 							y_new_x = Const(State::S0, GetSize(y_group_x));
 					}
@@ -695,16 +698,16 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 					if (!y_group_1.empty()) y_new_1 = Const(State::S1, GetSize(y_group_1));
 					if (!y_group_x.empty()) {
 						if (keepdc)
-							y_new_x = module->Or(NEW_ID, Const(State::Sx, GetSize(y_group_x)), b_group_x);
+							y_new_x = module->Or(NEW_ID3, Const(State::Sx, GetSize(y_group_x)), b_group_x, false, cell->get_src_attribute());
 						else
 							y_new_x = Const(State::S1, GetSize(y_group_x));
 					}
 				} else if (cell->type.in(ID($xor), ID($xnor))) {
 					if (!y_group_0.empty()) y_new_0 = b_group_0;
-					if (!y_group_1.empty()) y_new_1 = module->Not(NEW_ID, b_group_1);
+					if (!y_group_1.empty()) y_new_1 = module->Not(NEW_ID3_SUFFIX("inv"), b_group_1, false, cell->get_src_attribute());
 					if (!y_group_x.empty()) {
 						if (keepdc)
-							y_new_x = module->Xor(NEW_ID, Const(State::Sx, GetSize(y_group_x)), b_group_x);
+							y_new_x = module->Xor(NEW_ID3, Const(State::Sx, GetSize(y_group_x)), b_group_x, false, cell->get_src_attribute());
 						else // This should be fine even with keepdc, but opt_expr_xor.ys wants to keep the xor
 							y_new_x = Const(State::Sx, GetSize(y_group_x));
 					}
@@ -724,6 +727,7 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 
 		if (cell->type == ID($bwmux))
 		{
+			RTLIL::SigSpec inv_sig;
 			RTLIL::SigSpec sig_a = assign_map(cell->getPort(ID::A));
 			RTLIL::SigSpec sig_b = assign_map(cell->getPort(ID::B));
 			RTLIL::SigSpec sig_s = assign_map(cell->getPort(ID::S));
@@ -750,6 +754,9 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 			}
 			else if (sig_a.is_fully_def() || sig_b.is_fully_def())
 			{
+				RTLIL::IdString cell_name = cell->name;
+				module->rename(cell->name, NEW_ID);
+
 				bool flip = !sig_a.is_fully_def();
 				if (flip)
 					std::swap(sig_a, sig_b);
@@ -767,11 +774,17 @@ void replace_const_cells(RTLIL::Design *design, RTLIL::Module *module, bool cons
 				RTLIL::SigSpec y_new_0, y_new_1;
 
 				if (flip) {
-					if (!y_group_0.empty()) y_new_0 = module->And(NEW_ID, b_group_0, module->Not(NEW_ID, s_group_0));
-					if (!y_group_1.empty()) y_new_1 = module->Or(NEW_ID, b_group_1, s_group_1);
+					if (!y_group_0.empty()) {
+						inv_sig = module->Not(NEW_ID3_SUFFIX("inv"), s_group_0, false, cell->get_src_attribute());
+						y_new_0 = module->And(NEW_ID3, b_group_0, inv_sig, false, cell->get_src_attribute());
+					}
+					if (!y_group_1.empty()) y_new_1 = module->Or(NEW_ID3, b_group_1, s_group_1, false, cell->get_src_attribute());
 				} else {
-					if (!y_group_0.empty()) y_new_0 = module->And(NEW_ID, b_group_0, s_group_0);
-					if (!y_group_1.empty()) y_new_1 = module->Or(NEW_ID, b_group_1, module->Not(NEW_ID, s_group_1));
+					if (!y_group_0.empty()) y_new_0 = module->And(NEW_ID3, b_group_0, s_group_0, false, cell->get_src_attribute());
+					if (!y_group_1.empty()) {
+						inv_sig = module->Not(NEW_ID3_SUFFIX("inv"), s_group_1, false, cell->get_src_attribute());
+						y_new_1 = module->Or(NEW_ID3, b_group_1, inv_sig, false, cell->get_src_attribute());
+					}
 				}
 
 				module->connect(y_group_0, y_new_0);
