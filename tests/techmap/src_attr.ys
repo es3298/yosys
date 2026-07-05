@@ -212,3 +212,33 @@ EOT
 clockgate -pos ICG EN:CLK:GCLK
 select -assert-count 1 t:ICG a:src=clockgate_neg_src %i
 select -assert-count 1 t:$_NOT_ a:src=clockgate_neg_src %i
+
+design -reset
+
+read_rtlil << EOT
+module \sub
+  wire input 1 \i
+  wire output 2 \o
+  cell \namedsub \helper
+    connect \i \i
+    connect \o \o
+  end
+end
+EOT
+
+design -stash techmap
+
+read_rtlil << EOT
+module \top
+  wire input 1 \i
+  wire output 2 \o
+  attribute \src "techmap_src"
+  cell \sub \s0
+    connect \i \i
+    connect \o \o
+  end
+end
+EOT
+
+techmap -map %techmap
+select -assert-count 1 t:namedsub a:src=techmap_src %i
