@@ -1,0 +1,20 @@
+read_blif <<EOT
+.model top
+.inputs a b
+.outputs y
+.names a b y
+11 1
+.end
+.node_retention_begin
+y SRC a_src b_src
+.node_retention_end
+.model passthrough
+.inputs i
+.outputs o
+.names i o
+1 1
+.end
+EOT
+
+select -assert-count 1 top/w:y a:node_retention_sources="a_src b_src" %i
+select -assert-count 1 passthrough/w:o

@@ -249,10 +249,47 @@ void parse_blif(RTLIL::Design *design, std::istream &f, IdString dff_name, bool 
 					blif_maxnum = 0;
 				}
 
+				bool reprocess_buffer = false;
+				if (read_next_line(buffer, buffer_size, line_count, f)) {
+					char *next_cmd = strtok(buffer, " \t\r\n");
+					if (next_cmd != nullptr && !strcmp(next_cmd, ".node_retention_begin")) {
+						while (read_next_line(buffer, buffer_size, line_count, f)) {
+							char *line_cmd = strtok(buffer, " \t\r\n");
+							if (line_cmd == nullptr)
+								continue;
+
+							if (!strcmp(line_cmd, ".node_retention_end"))
+								break;
+
+							std::string node_name = line_cmd;
+							char *src_token = strtok(nullptr, " \t\r\n");
+							if (src_token == nullptr || strcmp(src_token, "SRC"))
+								continue;
+
+							std::string sources;
+							for (char *source_token = strtok(nullptr, " \t\r\n"); source_token != nullptr; source_token = strtok(nullptr, " \t\r\n")) {
+								if (!sources.empty())
+									sources += " ";
+								sources += source_token;
+							}
+
+							if (!sources.empty()) {
+								RTLIL::Wire *wire = module->wire(RTLIL::escape_id(node_name));
+								if (wire != nullptr)
+									wire->attributes[RTLIL::IdString("\\node_retention_sources")] = Const(sources);
+							}
+						}
+					} else {
+						reprocess_buffer = true;
+					}
+				}
+
 				module = nullptr;
 				lastcell = nullptr;
 				obj_attributes = nullptr;
 				obj_parameters = nullptr;
+				if (reprocess_buffer)
+					goto continue_without_read;
 				continue;
 			}
 
