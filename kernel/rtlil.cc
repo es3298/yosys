@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <charconv>
 #include <optional>
+#include <set>
 #include <string_view>
 #include <sstream>
 
@@ -960,7 +961,7 @@ string RTLIL::AttrObject::get_string_attribute(RTLIL::IdString id) const
 	return value;
 }
 
-void RTLIL::AttrObject::set_strpool_attribute(RTLIL::IdString id, const pool<string> &data)
+void RTLIL::AttrObject::set_strpool_attribute(const RTLIL::IdString& id, const std::set<string> &data)
 {
 	string attrval;
 	for (const auto &s : data) {
@@ -971,17 +972,17 @@ void RTLIL::AttrObject::set_strpool_attribute(RTLIL::IdString id, const pool<str
 	set_string_attribute(id, attrval);
 }
 
-void RTLIL::AttrObject::add_strpool_attribute(RTLIL::IdString id, const pool<string> &data)
+void RTLIL::AttrObject::add_strpool_attribute(const RTLIL::IdString& id, const std::set<string> &data)
 {
-	pool<string> union_data = get_strpool_attribute(id);
+	std::set<string> union_data = get_strpool_attribute(id);
 	union_data.insert(data.begin(), data.end());
 	if (!union_data.empty())
 		set_strpool_attribute(id, union_data);
 }
 
-pool<string> RTLIL::AttrObject::get_strpool_attribute(RTLIL::IdString id) const
+std::set<string> RTLIL::AttrObject::get_strpool_attribute(const RTLIL::IdString &id) const
 {
-	pool<string> data;
+	std::set<string> data;
 	if (attributes.count(id) != 0)
 		for (auto s : split_tokens(get_string_attribute(id), "|"))
 			data.insert(s);
