@@ -72,16 +72,46 @@ struct AigmapPass : public Pass {
 			dict<IdString, int> stat_not_replaced;
 			int orig_num_cells = GetSize(module->cells());
 
+			dict<std::string, Aig> aig_cache;
+
 			pool<IdString> new_sel;
 			for (auto cell : module->selected_cells())
 			{
-				Aig aig(cell);
+				if (cell->type.in(ID($_AND_), ID($_NOT_))) {
+					not_replaced_count++;
+					stat_not_replaced[cell->type]++;
+					if (select_mode)
+						new_sel.insert(cell->name);
+					continue;
+				}
 
-				if (cell->type.in(ID($_AND_), ID($_NOT_)))
-					aig.name.clear();
+				if (nand_mode && cell->type == ID($_NAND_)) {
+					not_replaced_count++;
+					stat_not_replaced[cell->type]++;
+					if (select_mode)
+						new_sel.insert(cell->name);
+					continue;
+				}
 
-				if (nand_mode && cell->type == ID($_NAND_))
-					aig.name.clear();
+				if (cell->type[0] != '$') {
+					not_replaced_count++;
+					stat_not_replaced[cell->type]++;
+					if (select_mode)
+						new_sel.insert(cell->name);
+					continue;
+				}
+
+				std::string cache_key = cell->type.str();
+				cell->parameters.sort();
+				for (auto &p : cell->parameters)
+					cache_key += stringf(":%s=%s", p.first.c_str(), p.second.as_string().c_str());
+
+				auto cache_it = aig_cache.find(cache_key);
+				if (cache_it == aig_cache.end()) {
+					auto r = aig_cache.insert(std::make_pair(cache_key, Aig(cell)));
+					cache_it = r.first;
+				}
+				const Aig &aig = cache_it->second;
 
 				if (aig.name.empty()) {
 					not_replaced_count++;
@@ -108,8 +138,10 @@ struct AigmapPass : public Pass {
 						SigBit A = sigs.at(node.left_parent);
 						SigBit B = sigs.at(node.right_parent);
 						if (nand_mode && node.inverter) {
-							bit = module->addWire(NEW_ID);
-							auto gate = module->addNandGate(NEW_ID, A, B, bit);
+							bit = module->addWire(NEW_ID2_SUFFIX("bit"));
+							auto gate = module->addNandGate(NEW_ID2_SUFFIX("nand"), A, B, bit);
+							for (const auto &attr : cell->attributes)
+								gate->attributes[attr.first] = attr.second;
 							if (select_mode)
 								new_sel.insert(gate->name);
 
@@ -119,8 +151,10 @@ struct AigmapPass : public Pass {
 							if (and_cache.count(key))
 								bit = and_cache.at(key);
 							else {
-								bit = module->addWire(NEW_ID);
-								auto gate = module->addAndGate(NEW_ID, A, B, bit);
+								bit = module->addWire(NEW_ID2_SUFFIX("bit"));
+								auto gate = module->addAndGate(NEW_ID2_SUFFIX("and"), A, B, bit);
+								for (const auto &attr : cell->attributes)
+									gate->attributes[attr.first] = attr.second;
 								if (select_mode)
 									new_sel.insert(gate->name);
 							}
@@ -128,8 +162,10 @@ struct AigmapPass : public Pass {
 					}
 
 					if (node.inverter) {
-						SigBit new_bit = module->addWire(NEW_ID);
-						auto gate = module->addNotGate(NEW_ID, bit, new_bit);
+						SigBit new_bit = module->addWire(NEW_ID2_SUFFIX("new_bit"));
+						auto gate = module->addNotGate(NEW_ID2_SUFFIX("inv"), bit, new_bit);
+						for (const auto &attr : cell->attributes)
+							gate->attributes[attr.first] = attr.second;
 						bit = new_bit;
 						if (select_mode)
 							new_sel.insert(gate->name);

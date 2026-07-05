@@ -1,0 +1,112 @@
+read_rtlil << EOT
+module \top
+  wire width 2 input 1 \a
+  wire width 2 input 2 \b
+  wire width 2 output 3 \y
+  cell $and \and_12
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 2
+    connect \A \a
+    connect \B \b
+    connect \Y \y
+  end
+end
+EOT
+
+simplemap
+select -assert-count 1 c:and
+select -assert-count 1 c:and_1
+select -assert-count 0 c:$auto*
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire output 2 \y
+  cell $lut \lut_9
+    parameter \WIDTH 1
+    parameter \LUT 2'10
+    connect \A \a
+    connect \Y \y
+  end
+end
+EOT
+
+lut2mux
+select -assert-count 1 c:lut
+select -assert-count 0 c:$auto*
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \s
+  wire output 2 \y
+  cell $bmux \bmux_7
+    parameter \WIDTH 1
+    parameter \S_WIDTH 1
+    connect \A 2'10
+    connect \S \s
+    connect \Y \y
+  end
+end
+EOT
+
+bmuxmap
+select -assert-count 1 c:bmux
+select -assert-count 1 w:bmux_7_data
+select -assert-count 0 c:$auto*
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire width 3 input 1 \b
+  wire width 3 input 2 \s
+  wire output 3 \y
+  cell $pmux \pmux_5
+    parameter \WIDTH 1
+    parameter \S_WIDTH 3
+    connect \A 1'0
+    connect \B \b
+    connect \S \s
+    connect \Y \y
+  end
+end
+EOT
+
+pmuxtree
+select -assert-count 3 c:pmux_5_mux*
+select -assert-count 1 c:pmux_5_or
+select -assert-count 1 c:pmux_5_not
+select -assert-count 1 c:pmux_5_reduce_or
+
+design -reset
+
+read_rtlil << EOT
+module \top
+  wire input 1 \a
+  wire input 2 \b
+  wire output 3 \y
+  cell $xor \xor_4
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \a
+    connect \B \b
+    connect \Y \y
+  end
+end
+EOT
+
+aigmap
+select -assert-count 3 c:xor_4_and*
+select -assert-count 4 c:xor_4_inv*
+select -assert-count 3 w:xor_4_bit*
+select -assert-count 4 w:xor_4_new_bit*
