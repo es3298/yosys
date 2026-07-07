@@ -308,16 +308,16 @@ RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view 
 #define NEW_ID_SUFFIX(suffix) \
 	YOSYS_NAMESPACE_PREFIX new_id_suffix(__FILE__, __LINE__, __FUNCTION__, suffix)
 
-#define UNQ_SUFFIX "_ix" + std::to_string(autoidx++)
-#define NEW_ID2 IdString(cell->name.str() + UNQ_SUFFIX)
-#define NEW_ID2_SUFFIX(suffix) IdString(cell->name.str() + "_" + suffix + UNQ_SUFFIX)
-#define NEW_ID3 IdString(cell_name.str() + UNQ_SUFFIX)
-#define NEW_ID3_SUFFIX(suffix) IdString(cell_name.str() + "_" + suffix + UNQ_SUFFIX)
+#define NEW_ID2 module->uniquify(cell->name.str())
+#define NEW_ID2_SUFFIX(suffix) module->uniquify(cell->name.str() + "_" + suffix)
+#define NEW_ID3 module->uniquify(cell_name.str())
+#define NEW_ID3_SUFFIX(suffix) module->uniquify(cell_name.str() + "_" + suffix)
 #define NEW_ID2_SUFFIX2(suffix) NEW_ID3_SUFFIX(suffix)
-#define NEW_ID4 IdString(name.str() + UNQ_SUFFIX)
-#define NEW_ID4_SUFFIX(suffix) IdString(name.str() + "_" + suffix + UNQ_SUFFIX)
-#define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(mem.mem->name.str() + "_" + suffix) : module->uniquify(string("\\mem_") + suffix)
+#define NEW_ID4 module->uniquify(name.str())
+#define NEW_ID4_SUFFIX(suffix) module->uniquify(name.str() + "_" + suffix)
+#define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(stringf("%s_%s", mem.mem->name.c_str(), suffix)) : module->uniquify(stringf("\\mem_%s", suffix))
 #define NEW_ABC_ID module->uniquify(IdString("\\boolopt"))
+#define NEW_BLIF_ID IdString(stringf("\\boolopt_%d", autoidx++))
 
 namespace ID = RTLIL::ID;
 
