@@ -181,9 +181,9 @@ struct OptDffWorker
 				module->addMuxGate(NEW_ID2_SUFFIX("mux"), b, a, sel, y, cell->get_src_attribute());
 		} else {
 			if (pol)
-				module->addMux(NEW_ID2_SUFFIX("mux"), a, b, sel, y, false, cell->get_src_attribute());
+				module->addMux(NEW_ID2_SUFFIX("mux"), a, b, sel, y, cell->get_src_attribute());
 			else
-				module->addMux(NEW_ID2_SUFFIX("mux"), b, a, sel, y, false, cell->get_src_attribute());
+				module->addMux(NEW_ID2_SUFFIX("mux"), b, a, sel, y, cell->get_src_attribute());
 		}
 	}
 

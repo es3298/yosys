@@ -1,0 +1,20 @@
+read_rtlil <<EOF
+module \top
+  wire width 4 \a
+  wire width 2 \s
+  wire \y
+  cell $bmux \u_bmux
+    parameter \WIDTH 1
+    parameter \S_WIDTH 2
+    connect \A \a
+    connect \S \s
+    connect \Y \y
+  end
+end
+EOF
+
+bmuxmap
+
+select -assert-count 3 c:u_bmux*
+select -assert-count 2 w:u_bmux_data*
+select -assert-count 0 c:$auto$*

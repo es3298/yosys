@@ -1,0 +1,12 @@
+read_verilog <<EOF
+module top(input [1:0] a, input [1:0] b, output [1:0] y);
+  assign y = a & b;
+endmodule
+EOF
+
+proc
+opt_expr
+simplemap
+
+select -assert-count 2 c:$and*
+select -assert-count 0 c:$auto$*
