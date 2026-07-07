@@ -644,6 +644,7 @@ struct OptDffWorker
 	{
 		std::map<ctrls_t, std::vector<int>> groups;
 		std::vector<int> remaining_indices;
+		std::vector<Cell *> new_cells;
 		Const::Builder val_srst_builder(ff.width);
 
 		for (int i = 0; i < ff.width; i++) {
@@ -708,8 +709,10 @@ struct OptDffWorker
 				new_ff.ce_over_srst = true;
 
 			Cell *new_cell = new_ff.emit();
-			if (new_cell)
+			if (new_cell) {
+				new_cells.push_back(new_cell);
 				dff_cells.push_back(new_cell);
+			}
 
 			log("Adding SRST signal on %s (%s) from module %s (D = %s, Q = %s, rval = %s).\n",
 					cell, cell->type.unescape(), module,
@@ -717,7 +720,10 @@ struct OptDffWorker
 		}
 
 		if (remaining_indices.empty()) {
+			IdString cell_name = cell->name;
 			module->remove(cell);
+			if (GetSize(new_cells) == 1)
+				module->rename(new_cells[0], cell_name);
 			return true;
 		}
 
@@ -734,6 +740,7 @@ struct OptDffWorker
 	{
 		std::map<std::pair<patterns_t, ctrls_t>, std::vector<int>> groups;
 		std::vector<int> remaining_indices;
+		std::vector<Cell *> new_cells;
 
 		for (int i = 0; i < ff.width; i++) {
 			ctrls_t enables;
@@ -782,8 +789,10 @@ struct OptDffWorker
 			new_ff.ce_over_srst = false;
 
 			Cell *new_cell = new_ff.emit();
-			if (new_cell)
+			if (new_cell) {
+				new_cells.push_back(new_cell);
 				dff_cells.push_back(new_cell);
+			}
 
 			log("Adding EN signal on %s (%s) from module %s (D = %s, Q = %s).\n",
 					cell, cell->type.unescape(), module,
@@ -791,7 +800,10 @@ struct OptDffWorker
 		}
 
 		if (remaining_indices.empty()) {
+			IdString cell_name = cell->name;
 			module->remove(cell);
+			if (GetSize(new_cells) == 1)
+				module->rename(new_cells[0], cell_name);
 			return true;
 		}
 
