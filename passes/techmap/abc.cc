@@ -619,7 +619,7 @@ std::string AbcModuleState::remap_name(RTLIL::IdString abc_name, RTLIL::Wire **o
 				const auto &bit = signal_bits.at(sid);
 				if (bit.wire != nullptr)
 				{
-					std::string s = stringf("$abc$%d$%s", map_autoidx, bit.wire->name.c_str()+1);
+					std::string s = stringf("\\%s_ix%d", bit.wire->name.c_str()+1, map_autoidx);
 					if (bit.wire->width != 1)
 						s += stringf("[%d]", bit.offset);
 					if (isnew)
@@ -632,7 +632,7 @@ std::string AbcModuleState::remap_name(RTLIL::IdString abc_name, RTLIL::Wire **o
 			}
 		}
 	}
-	return stringf("$abc$%d$%s", map_autoidx, abc_name.substr(1));
+	return stringf("\\%s_ix%d", abc_name.substr(1), map_autoidx);
 }
 
 void AbcModuleState::dump_loop_graph(FILE *f, int &nr, dict<int, pool<int>> &edges, pool<int> &workpool, std::vector<int> &in_counts)

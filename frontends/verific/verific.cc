@@ -249,10 +249,11 @@ bool is_blackbox(Netlist *nl)
 
 RTLIL::IdString VerificImporter::new_verific_id(Verific::DesignObj *obj)
 {
-	std::string s = stringf("$verific$%s", obj->Name());
-	if (obj->Linefile())
-		s += stringf("$%s:%d", RTLIL::encode_filename(Verific::LineFile::GetFileName(obj->Linefile())), Verific::LineFile::GetLineNo(obj->Linefile()));
-	s += stringf("$%d", autoidx++);
+	std::string s = stringf("$%s", obj->Name());
+	while (seen_ids.count(s + stringf("_ix%d", autoidx)))
+		autoidx++;
+	s += stringf("_ix%d", autoidx++);
+	seen_ids.insert(s);
 	return s;
 }
 
