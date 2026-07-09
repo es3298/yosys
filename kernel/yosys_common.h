@@ -308,14 +308,25 @@ RTLIL::IdString new_id_suffix(std::string_view file, int line, std::string_view 
 #define NEW_ID_SUFFIX(suffix) \
 	YOSYS_NAMESPACE_PREFIX new_id_suffix(__FILE__, __LINE__, __FUNCTION__, suffix)
 
-#define NEW_ID2 module->uniquify(cell->name.str())
-#define NEW_ID2_SUFFIX(suffix) module->uniquify(cell->name.str() + "_" + suffix)
-#define NEW_ID3 module->uniquify(cell_name.str())
-#define NEW_ID3_SUFFIX(suffix) module->uniquify(cell_name.str() + "_" + suffix)
+#define DERIVED_PRIVATE_ID(base, suffix) \
+	([&]() { \
+		std::string base_name = (base).str(); \
+		if (!base_name.empty() && (base_name[0] == '\\' || base_name[0] == '$')) \
+			base_name.erase(0, 1); \
+		if (base_name.empty()) \
+			base_name = "auto"; \
+		std::string suffix_str = (suffix); \
+		return suffix_str.empty() ? std::string("$gen$") + base_name : "$" + suffix_str + "$" + base_name; \
+	}())
+
+#define NEW_ID2 module->uniquify(DERIVED_PRIVATE_ID(cell->name, "gen"))
+#define NEW_ID2_SUFFIX(suffix) module->uniquify(DERIVED_PRIVATE_ID(cell->name, suffix))
+#define NEW_ID3 module->uniquify(DERIVED_PRIVATE_ID(cell_name, "gen"))
+#define NEW_ID3_SUFFIX(suffix) module->uniquify(DERIVED_PRIVATE_ID(cell_name, suffix))
 #define NEW_ID2_SUFFIX2(suffix) NEW_ID3_SUFFIX(suffix)
-#define NEW_ID4 module->uniquify(name.str())
-#define NEW_ID4_SUFFIX(suffix) module->uniquify(name.str() + "_" + suffix)
-#define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(stringf("%s_%s", mem.mem->name.c_str(), suffix)) : module->uniquify(stringf("\\mem_%s", suffix))
+#define NEW_ID4 module->uniquify(DERIVED_PRIVATE_ID(name, "gen"))
+#define NEW_ID4_SUFFIX(suffix) module->uniquify(DERIVED_PRIVATE_ID(name, suffix))
+#define NEW_MEM_ID_SUFFIX(suffix) mem.mem ? module->uniquify(DERIVED_PRIVATE_ID(mem.mem->name, suffix)) : module->uniquify(stringf("$%s$mem", suffix))
 #define NEW_ABC_ID module->uniquify(IdString("\\boolopt"))
 #define NEW_BLIF_ID IdString(stringf("\\boolopt_%d", autoidx++))
 

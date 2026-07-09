@@ -8,5 +8,5 @@ proc
 opt_expr
 simplemap
 
-select -assert-count 2 c:$and*
+select -assert-count 2 c:$gen$and*
 select -assert-count 0 c:$auto$*

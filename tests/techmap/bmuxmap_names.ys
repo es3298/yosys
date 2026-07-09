@@ -15,6 +15,6 @@ EOF
 
 bmuxmap
 
-select -assert-count 3 c:u_bmux*
-select -assert-count 2 w:u_bmux_data*
+select -assert-count 3 c:$gen$u_bmux*
+select -assert-count 2 w:$data$u_bmux*
 select -assert-count 0 c:$auto$*
